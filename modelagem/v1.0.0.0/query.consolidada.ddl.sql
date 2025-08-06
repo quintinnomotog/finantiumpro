@@ -1,5 +1,3 @@
-create extension if not exists "pgcrypto";
-
 create table if not exists tb_tipo_pessoa (
     codigo bigserial not null,
     codigo_publico uuid not null default gen_random_uuid(),
@@ -222,19 +220,130 @@ create table if not exists tb_anexo_transacao_financeira (
     constraint fk_anexo_transacao_financeira foreign key (id_transacao_financeira) references tb_transacao_financeira (codigo)
 );
 
+create table if not exists tb_categoria_contrato (
+	codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	descricao varchar(100) not null,
+	data_criacao timestamp default now() not null,
+	data_edicao timestamp default now() null,
+	data_delecao timestamp default now() null,
+    constraint pk_categoria_contrato primary key (codigo),
+    constraint un_categoria_contrato unique (descricao)
+);
+
+create table if not exists tb_vigencia_contrato (
+	codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	descricao varchar(100) not null,
+	data_criacao timestamp default current_timestamp not null,
+	data_edicao timestamp default current_timestamp null,
+	data_delecao timestamp null,
+    constraint pk_vigencia_contrato primary key (codigo),
+    constraint un_vigencia_contrato unique (descricao)
+);
+
+create table if not exists tb_situacao_contrato (
+	codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	descricao varchar(100) not null,
+	data_criacao timestamp default current_timestamp not null,
+	data_edicao timestamp default current_timestamp null,
+	data_delecao timestamp null,
+    constraint pk_situacao_contrato primary key (codigo),
+    constraint un_situacao_contrato unique (descricao)
+);
+
+create table if not exists tb_situacao_pagamento (
+	codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	descricao varchar(100) not null,
+	data_criacao timestamp default current_timestamp not null,
+	data_edicao timestamp default current_timestamp null,
+	data_delecao timestamp null,
+    constraint pk_situacao_pagamento primary key (codigo),
+    constraint un_situacao_pagamento unique (descricao)
+);
+
 create table if not exists tb_contrato (
     codigo bigserial not null,
     codigo_publico uuid not null default gen_random_uuid(),
-    id_pessoa_cliente bigint not null,
-    data_inicio date not null,
-    data_fim date not null,
-    valor_mensal numeric(15,2) not null,
-    condicoes text,
-    data_criacao timestamp default now(),
-    data_edicao timestamp null,
-    data_delecao timestamp null,
+	id_categoria_contrato bigserial not null,
+	id_pessoa_contratada bigserial not null,
+	id_pessoa_contratante bigserial not null,
+	id_vigencia_contrato bigserial not null,
+	id_situacao_contrato bigserial not null,
+	data_inicio date null,
+	data_fim date null,
+	valor_total numeric(15,2) null default 0,
+	valor_total_pago numeric(15,2) not null default 0,
+	dia_vencimento int not null,
+	observacao varchar(255) null,
+	data_criacao timestamp default current_timestamp not null,
+	data_edicao timestamp default current_timestamp null,
+	data_delecao timestamp null,
     constraint pk_contrato primary key (codigo),
-    constraint fk_contrato_pessoa foreign key (id_pessoa_cliente) references tb_pessoa (codigo)
+    constraint fk_contrato_categoria_contrato foreign key (id_categoria_contrato) references tb_categoria_contrato (codigo),
+	constraint fk_contrato_pessoa_contratada foreign key (id_pessoa_contratada) references tb_pessoa (codigo),
+	constraint fk_contrato_pessoa_contrante foreign key (id_pessoa_contratante) references tb_pessoa (codigo),
+	constraint fk_contrato_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo),
+	constraint fk_contrato_situacao_contrato foreign key (id_situacao_contrato) references tb_situacao_contrato (codigo),
+	constraint un_contrato unique (id_pessoa_contratada, id_pessoa_contratante, valor_total)
+);
+
+create table if not exists tb_parcelamento_contrato (
+    codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	id_contrato bigserial not null,
+	id_situacao_pagamento bigserial not null,
+	numero_parcela int not null,
+	valor_parcela numeric(10,2) not null,
+	valor_juros numeric(10,2) null,
+	data_vencimento date not null,
+    constraint pk_parcelamento_contrato primary key (codigo),
+    constraint fk_contrato foreign key (id_contrato) references tb_contrato (codigo),
+	constraint fk_situacao_pagamento foreign key (id_situacao_pagamento) references tb_situacao_pagamento (codigo),
+	constraint un_parcelamento_contrato unique (id_contrato, valor_parcela)
+);
+
+create table if not exists tb_parcelamento_contrato (
+    codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	id_parcela bigserial not null,
+	id_forma_pagamento bigserial not null,
+	id_meio_pagamento bigserial not null,
+	valor_pago numeric(10,2),
+	data_pagamento date not null,
+    constraint pk_parcelamento_contrato primary key (codigo),
+    constraint fk_parcela foreign key (id_parcela) references tb_parcela (codigo),
+	constraint fk_forma_pagamento foreign key (id_forma_pagamento) references tb_forma_pagamento (codigo),
+	constraint fk_meio_pagamento foreign key (id_meio_pagamento) references tb_meio_pagamento (codigo)
+);
+
+create table if not exists tb_situacao_renovacao_contrato (
+	codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	descricao varchar(100) not null,
+	data_criacao timestamp default current_timestamp not null,
+	data_edicao timestamp default current_timestamp null,
+	data_delecao timestamp null,
+    constraint pk_situacao_renovacao_contrato primary key (codigo),
+    constraint un_situacao_renovacao_contrato unique (descricao)
+);
+
+create table if not exists tb_renovacao_contrato (
+    codigo bigserial not null,
+    codigo_publico uuid not null default gen_random_uuid(),
+	id_contrato bigserial not null,
+	id_situacao_renovacao_contrato bigserial not null,
+	id_vigencia_contrato bigserial not null,
+	data_inicio date not null,
+	data_fim date not null,
+	valor_total numeric(10,2) not null,
+	valor_reajuste numeric(10,2) null,
+    constraint pk_tb_renovacao_contrato primary key (codigo),
+    constraint fk_contrato foreign key (id_contrato) references tb_contrato (codigo),
+	constraint fk_situacao_renovacao_contrato foreign key (id_situacao_renovacao_contrato) references tb_situacao_renovacao_contrato (codigo),
+	constraint fk_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo)
 );
 
 create table if not exists tb_fatura_contrato (
@@ -285,33 +394,6 @@ create table if not exists tb_situacao_contrato (
 	data_delecao timestamp null,
     constraint pk_situacao_contrato primary key (codigo),
     constraint un_situacao_contrato unique (descricao)
-);
-
-create table if not exists tb_contrato (
-    codigo bigserial not null,
-    codigo_publico uuid not null default gen_random_uuid(),
-	id_categoria_contrato bigserial not null,
-	id_pessoa_contratada bigserial not null,
-	id_pessoa_contratante bigserial not null,
-	id_vigencia_contrato bigserial not null,
-	id_situacao_contrato bigserial not null,
-	data_inicio date null,
-	data_fim date null,
-	valor_total numeric(15,2) null default 0,
-	valor_total_pago numeric(15,2) not null default 0,
-	dia_vencimento int not null,
-	data_vencimento date not null,
-	observacao varchar(255) null,
-	data_criacao timestamp default current_timestamp not null,
-	data_edicao timestamp default current_timestamp null,
-	data_delecao timestamp null,
-    constraint pk_contrato primary key (codigo),
-    constraint fk_contrato_categoria foreign key (id_categoria_contrato) references tb_categoria_contrato (codigo),
-	constraint fk_contrato_pessoa_contratada foreign key (id_pessoa_contratada) references tb_pessoa (codigo),
-	constraint fk_contrato_pessoa_contrante foreign key (id_pessoa_contratante) references tb_pessoa (codigo),
-	constraint fk_contrato_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo),
-	constraint fk_contrato_situacao_contrato foreign key (id_situacao_contrato) references tb_situacao_contrato (codigo),
-	constraint un_contrato unique (id_pessoa_contratada, id_pessoa_contratante, valor_total)
 );
 
 create table if not exists tb_situacao_pagamento (
@@ -380,121 +462,3 @@ create table if not exists tb_renovacao_contrato (
 	constraint fk_situacao_renovacao_contrato foreign key (id_situacao_renovacao_contrato) references tb_situacao_renovacao_contrato (codigo),
 	constraint fk_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo)
 );
-
-insert into tb_tipo_pessoa (descricao) values ('Pessoa Física');
-insert into tb_tipo_pessoa (descricao) values ('Pessoa Jurídica');
-insert into tb_tipo_pessoa (descricao) values ('Pessoa Sistema');
-insert into tb_tipo_pessoa (descricao) values ('Pessoa Instituição Financeira');
-
-insert into tb_tipo_conta_bancaria (descricao) values ('Conta Carteira');
-insert into tb_tipo_conta_bancaria (descricao) values ('Conta Corrente');
-insert into tb_tipo_conta_bancaria (descricao) values ('Conta Poupança');
-insert into tb_tipo_conta_bancaria (descricao) values ('Conta Investimento');
-
-insert into tb_pessoa (id_tipo_pessoa, nome) values (
-	(select codigo from tb_tipo_pessoa where descricao = 'Pessoa Instituição Financeira'),
-	'Conta Carteira'
-);
-
-insert into tb_pessoa (id_tipo_pessoa, nome) values (
-	(select codigo from tb_tipo_pessoa where descricao = 'Pessoa Física'),
-	'Usuário do Sistema'
-);
-
-insert into tb_conta_bancaria (id_tipo_conta_bancaria, id_pessoa_instituicao_financeira, saldo) values (
-	(select codigo from tb_tipo_conta_bancaria where descricao = 'Conta Carteira'),
-	(select codigo from tb_pessoa where id_tipo_pessoa = 4),
-	0
-);
-
-insert into tb_pessoa (id_tipo_pessoa, nome) values (
-	(select codigo from tb_tipo_pessoa where descricao = 'Pessoa Física'),
-	'Deinin Meys Lasarn'
-);
-
-insert into tb_pessoa (id_tipo_pessoa, nome) values (
-	(select codigo from tb_tipo_pessoa where descricao = 'Pessoa Jurídica'),
-	'Casa Grande Mecânica e Eletrica em Geral'
-);
-
-insert into tb_transacao_financeira (id_pessoa_estabelecimento, id_pessoa_comprador, data, valor) values (
-	(select codigo from tb_pessoa where nome = 'Casa Grande Mecânica e Eletrica em Geral'),
-	(select codigo from tb_pessoa where nome = 'Deinin Meys Lasarn'),
-	now(),
-	440
-);
-
--- Detalhar a Transação Financeira
-
-insert into tb_produto_servico (nome) values ('Silicone Neutro Car 80');
-insert into tb_produto_servico (nome) values ('Percador de Óleo');
-insert into tb_produto_servico (nome) values ('Mão de Obra Especializada');
-
-insert into tb_transacao_financeira_produto_servico (id_produto_servico, id_transacao_financeira, valor_unitario, quantidade) values (
-	(select codigo from tb_produto_servico where nome = 'Silicone Neutro Car 80'),
-	(select codigo from tb_transacao_financeira where valor = 440),
-	60,
-	2
-);
-
-insert into tb_transacao_financeira_produto_servico (id_produto_servico, id_transacao_financeira, valor_unitario, quantidade) values (
-	(select codigo from tb_produto_servico where nome = 'Percador de Óleo'),
-	(select codigo from tb_transacao_financeira where valor = 440),
-	120,
-	1
-);
-
-insert into tb_transacao_financeira_produto_servico (id_produto_servico, id_transacao_financeira, valor_unitario, quantidade) values (
-	(select codigo from tb_produto_servico where nome = 'Mão de Obra Especializada'),
-	(select codigo from tb_transacao_financeira where valor = 440),
-	200,
-	1
-);
-
--- Pagar a Transação Financeira
-
-insert into tb_forma_pagamento (descricao) values ('À Vista');
-insert into tb_forma_pagamento (descricao) values ('Parcelado');
-insert into tb_forma_pagamento (descricao) values ('Recorrente');
-insert into tb_forma_pagamento (descricao) values ('Antecipado');
-
-insert into tb_meio_pagamento (descricao) values ('Dinheiro');
-insert into tb_meio_pagamento (descricao) values ('Transferência Bancária - TED');
-insert into tb_meio_pagamento (descricao) values ('Transferência Bancária - DOC');
-insert into tb_meio_pagamento (descricao) values ('Transferência Bancária - PIX');
-insert into tb_meio_pagamento (descricao) values ('Cartão de Débito em Conta Corrente');
-insert into tb_meio_pagamento (descricao) values ('Cartão de Crédito em Conta Corrente');
-
-insert into tb_transacao_pagamento (id_transacao_financeira, id_forma_pagamento, id_meio_pagamento, valor_pago, data_pagamento) values (
-	(select codigo from tb_transacao_financeira where valor = 440),
-	(select codigo from tb_forma_pagamento where descricao = 'À Vista'),
-	(select codigo from tb_meio_pagamento where descricao = 'Transferência Bancária - PIX'),
-	200,
-	'2025-08-05'
-);
-
-insert into tb_transacao_pagamento (id_transacao_financeira, id_forma_pagamento, id_meio_pagamento, valor_pago, data_pagamento) values (
-	(select codigo from tb_transacao_financeira where valor = 440),
-	(select codigo from tb_forma_pagamento where descricao = 'À Vista'),
-	(select codigo from tb_meio_pagamento where descricao = 'Cartão de Débito em Conta Corrente'),
-	220,
-	'2025-08-05'
-);
-
-select *
-from tb_transacao_financeira;
-
-select * from tb_transacao_financeira_produto_servico; 
-
-select 
-    pessoa.nome,
-    produto_servico.nome,
-    sum(transacao_financeira_produto_servico.valor_unitario * transacao_financeira_produto_servico.quantidade) as valor_produto,
-    (
-        select sum(t2.valor_unitario * t2.quantidade) from tb_transacao_financeira_produto_servico t2
-    ) as valor_total_geral
-  from tb_transacao_financeira transacao_financeira 
-  join tb_pessoa pessoa on pessoa.codigo = transacao_financeira.id_pessoa_estabelecimento
-  join tb_transacao_financeira_produto_servico transacao_financeira_produto_servico on transacao_financeira_produto_servico.id_transacao_financeira = transacao_financeira.codigo
-  join tb_produto_servico produto_servico on produto_servico.codigo = transacao_financeira_produto_servico.id_produto_servico
-  group by pessoa.nome, transacao_financeira_produto_servico.id_produto_servico, produto_servico.nome;

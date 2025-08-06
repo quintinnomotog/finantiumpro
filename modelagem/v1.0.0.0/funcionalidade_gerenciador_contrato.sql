@@ -92,28 +92,27 @@ create table if not exists tb_situacao_contrato (
 create table if not exists tb_contrato (
     codigo bigserial not null,
     codigo_publico uuid not null default gen_random_uuid(),
-	id_categoria bigserial not null,
-	id_contratada bigserial not null,
-	id_contratante bigserial not null,
+	id_categoria_contrato bigserial not null,
+	id_pessoa_contratada bigserial not null,
+	id_pessoa_contratante bigserial not null,
 	id_vigencia_contrato bigserial not null,
 	id_situacao_contrato bigserial not null,
-	data_inicio date not null,
+	data_inicio date null,
 	data_fim date null,
 	valor_total numeric(15,2) null default 0,
 	valor_total_pago numeric(15,2) not null default 0,
-	dia_vencimento int null,
-	data_vencimento date not null,
+	dia_vencimento int not null,
 	observacao varchar(255) null,
 	data_criacao timestamp default current_timestamp not null,
 	data_edicao timestamp default current_timestamp null,
 	data_delecao timestamp null,
     constraint pk_contrato primary key (codigo),
-    constraint fk_contrato_categoria foreign key (id_categoria) references tb_categoria_contrato (codigo),
-	constraint fk_contrato_pessoa_contratada foreign key (id_contratada) references tb_pessoa (codigo),
-	constraint fk_contrato_pessoa_contrante foreign key (id_contratante) references tb_pessoa (codigo),
+    constraint fk_contrato_categoria_contrato foreign key (id_categoria_contrato) references tb_categoria_contrato (codigo),
+	constraint fk_contrato_pessoa_contratada foreign key (id_pessoa_contratada) references tb_pessoa (codigo),
+	constraint fk_contrato_pessoa_contrante foreign key (id_pessoa_contratante) references tb_pessoa (codigo),
 	constraint fk_contrato_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo),
 	constraint fk_contrato_situacao_contrato foreign key (id_situacao_contrato) references tb_situacao_contrato (codigo),
-	constraint un_contrato unique (id_contratada, id_contratante, valor_total)
+	constraint un_contrato unique (id_pessoa_contratada, id_pessoa_contratante, valor_total)
 );
 
 create table if not exists tb_situacao_pagamento (
@@ -181,6 +180,24 @@ create table if not exists tb_renovacao_contrato (
     constraint fk_contrato foreign key (id_contrato) references tb_contrato (codigo),
 	constraint fk_situacao_renovacao_contrato foreign key (id_situacao_renovacao_contrato) references tb_situacao_renovacao_contrato (codigo),
 	constraint fk_vigencia_contrato foreign key (id_vigencia_contrato) references tb_vigencia_contrato (codigo)
+);
+
+  -- Fuxo de Contrato
+  insert into tb_pessoa (nome) values ('Brava Internet');
+  insert into tb_categoria_contrato (descricao) values ('Serviço de Internet Fixa');
+   insert into tb_vigencia_contrato (descricao) values ('Semanal');
+   insert into tb_vigencia_contrato (descricao) values ('Mensal');
+   insert into tb_vigencia_contrato (descricao) values ('Anual');
+   insert into tb_situacao_contrato (descricao) values ('Vigênte');
+   insert into tb_situacao_contrato (descricao) values ('Encerrado');
+
+insert into tb_contrato (id_categoria_contrato, id_pessoa_contratada, id_pessoa_contratante, id_vigencia_contrato, id_situacao_contrato, data_inicio, dia_vencimento) values (
+    (select codigo from tb_categoria_contrato where descricao = 'Serviço de Internet Fixa'),
+    (select codigo from tb_pessoa where nome = 'Brava Internet'),
+    (select codigo from tb_pessoa where nome = 'Deinin Meys Lasarn'),
+    (select codigo from tb_vigencia_contrato where nome = 'Anual'),
+    (select codigo from tb_situacao_contrato where nome = 'Vigênte'),
+    '2025-01-01', 10, 
 );
 
 -- Outros
